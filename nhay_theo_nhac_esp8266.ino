@@ -12,7 +12,7 @@
 #endif
 #define NUMPIXELS 18
 #define PIN        D1 // On Trinket or Gemma, suggest changing this to 1
-#define tdelay 30
+#define tdelay 20
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 
@@ -27,18 +27,20 @@ IPAddress local_IP(192, 168, 0, 201);
 IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
 WiFiServer wifiServer(88);
+
 int ff = 0;
-int nguong  = 10;
+int nguong  = 25;
 int mod = 0;
 int addr = 0;
 int stat = 1;
 unsigned char R[3] = {200, 31, 86};
 unsigned char G[3] = {0, 255, 47};
 unsigned char B[3] = {150, 165, 209};
+
 int curl = 8;
 int curr = 9;
-void intro() {
 
+void intro() {
   pixels.clear(); // Set all pixel colors to 'off'
   int j = NUMPIXELS ;
   while (j > 0) {
@@ -68,6 +70,11 @@ void intro() {
   }
 }
 
+void clearLed() {
+  pixels.clear();
+  pixels.show();
+}
+
 void wifiSuccess() {
   int i = 9;
   int j = 8;
@@ -84,23 +91,50 @@ void wifiSuccess() {
   }
 }
 
-void effect(int dinh) {
-  if (9 + dinh > curr) {
-    for(int i = curr+1; i<=9+dinh;i++){
-      
-      }
-  } else {
-
-  }
-  curr = 9+dinh; 
-  if (8 - dinh > curl) {
-    
-  } else {
-    
-  }
-  curl = 8-dinh; 
+int convert(int sig) {
+  if (sig < 3) return 0;
+  if (sig > nguong) return 8;
+  if (sig >= 3 && sig <= 5) return 1;
+  if (sig >= 6 && sig <= 9)return 2;
+  if (sig >= 10 && sig <= 13)return 3;
+  if (sig >= 14 && sig <= 17)return 4;
+  if (sig >= 17 && sig <= 19) return 5;
+  if (sig >= 20 && sig <= 23) return 6;
+  if (sig >= 24 && sig <= nguong) return 7;
 }
 
+void effect(int sig) {
+  int dinh = convert(sig);
+  if (9 + dinh > curr) {
+    for (int i = curr + 1; i <= 9 + dinh; i++) { // chay tu curr den 9+dinh
+      pixels.setPixelColor(i ,  pixels.Color(0, 150, 0));
+      pixels.setPixelColor(i - 1, pixels.Color(R[mod], G[mod], B[mod]));
+      pixels.show();
+    }
+  } else {
+    for (int i = curr ; i >= 9 + dinh; i--) { //chay tu curr xuong
+      pixels.setPixelColor(i ,  pixels.Color(0, 0, 0));
+      pixels.setPixelColor(i - 1, pixels.Color(0, 150, 0));
+      pixels.show();
+    }
+  }
+  curr = 9 + dinh;
+  if (8 - dinh > curl) {
+    for (int i = curl; i <= 8 - dinh; i++) {
+      pixels.setPixelColor(i ,  pixels.Color(0, 0, 0));
+      pixels.setPixelColor(i + 1, pixels.Color(0, 150, 0));
+      pixels.show();
+    }
+  } else { // 8-dinh nho hon currl
+    for (int i = curl - 1 ; i >= 8 - dinh; i--) { //chay tu curl xuong 8-dinh
+      pixels.setPixelColor(i+1 ,  pixels.Color(R[mod], G[mod], B[mod]));
+      pixels.setPixelColor(i , pixels.Color(0, 150, 0));
+      pixels.show();
+    }
+   
+  } 
+  curl = 8 - dinh;
+}
 void setup() {
   Serial.begin(9600);
 #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
@@ -154,7 +188,6 @@ void setup() {
   }
   // neu khong conect dduoc van thuc hien xuong duoi
 
-
 }
 
 void loop() {
@@ -182,10 +215,19 @@ void loop() {
         mod = 3;
       }
       if (intruc == '3') {
-        nguong += 10;
+        nguong += 1;
       }
       if (intruc == '4') {
-        nguong -= 10;
+        if (nguong > 25)
+          nguong -= 1;
+      }
+      if (intruc == '5') {
+        if (stat == 2) {
+          stat = -1;
+        }
+        else {
+          stat = 2;
+        }
       }
 
       client.stop();
@@ -193,7 +235,13 @@ void loop() {
   }
 
   if (stat == 1) {
-    int do = analogRead(A0) - 9;
-
+    int so = analogRead(A0) ;
+    //Serial.println(so);
+    effect(so);
+  } else {
+    if (stat == -1) {
+      clearLed();
+      stat = 0;
+    }
   }
 }
